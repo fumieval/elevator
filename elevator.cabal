@@ -13,6 +13,10 @@ build-type:          Simple
 -- extra-source-files:  
 cabal-version:       >=1.10
 
+source-repository head
+  type: git
+  location: https://github.com/fumieval/elevator.git
+
 library
   exposed-modules:     Control.Elevator
   -- other-modules:       
