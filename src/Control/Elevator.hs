@@ -1,17 +1,27 @@
-{-# LANGUAGE TypeOperators, FlexibleContexts, DefaultSignatures, FlexibleInstances, ConstraintKinds, TypeFamilies, DataKinds #-}
+{-# LANGUAGE CPP, TypeOperators, FlexibleContexts, DefaultSignatures, FlexibleInstances, ConstraintKinds, TypeFamilies, DataKinds #-}
 module Control.Elevator where
 import Control.Monad.Trans.State.Lazy as Lazy
 import Control.Monad.Trans.State.Strict as Strict
 import Control.Monad.Trans.Writer.Lazy as Lazy
 import Control.Monad.Trans.Writer.Strict as Strict
 import Control.Monad.Trans.Identity
+import Data.Functor.Identity
 import Data.OpenUnion1.Clean
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader
+import Control.Monad.Trans.Maybe
+import Control.Monad.Trans.List
+import Control.Monad.Trans.Cont
 import Data.Monoid
 import Control.Monad.ST
+
+#if MIN_VERSION_transformers(0,4,0)
+import Control.Monad.Trans.Except
+#else
+import Control.Monad.Trans.Error
+#endif
 
 class Tower f where
   type Floors f :: List (* -> *)
@@ -35,6 +45,7 @@ instance Tower IO where
   type Floors IO = ST RealWorld :> Empty
   toLoft = stToIO ||> exhaust
 
+instance Tower Identity
 instance Tower Maybe
 instance Tower (Either e)
 instance Tower ((->) r)
@@ -92,3 +103,37 @@ instance (Monoid w, Monad m, Tower m) => Tower (Strict.WriterT w m) where
     ||> Strict.writer . Strict.runWriter
     ||> Strict.WriterT . Lazy.runWriterT
     ||> lift . toLoft1
+
+instance (Monad m, Tower m) => Tower (ContT r m) where
+  type Floors (ContT r m) = Cont (m r)
+    :> Floors1 m
+  toLoft = (\m -> ContT $ \cont -> runCont m cont)
+    ||> lift . toLoft1
+
+instance (Monad m, Tower m) => Tower (MaybeT m) where
+  type Floors (MaybeT m) = Maybe
+    :> Floors1 m
+  toLoft = MaybeT . return
+    ||> lift . toLoft1
+
+instance (Monad m, Tower m) => Tower (ListT m) where
+  type Floors (ListT m) = []
+    :> Floors1 m
+  toLoft = ListT . return
+    ||> lift . toLoft1
+
+#if MIN_VERSION_transformers(0,4,0)
+instance (Monad m, Tower m) => Tower (ExceptT e m) where
+  type Floors (ExceptT e m) = Either e
+    :> Except e
+    :> Floors1 m
+  toLoft = ExceptT . return
+    ||> ExceptT . return . runExcept
+    ||> lift . toLoft1
+#else
+instance (Error e, Monad m, Tower m) => Tower (ErrorT e m) where
+  type Floors (ExceptT e m) = Either e
+    :> Floors1 m
+  toLoft = ErrorT . return
+    ||> lift . toLoft1
+#endif
