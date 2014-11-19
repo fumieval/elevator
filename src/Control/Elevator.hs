@@ -1,4 +1,17 @@
 {-# LANGUAGE CPP, TypeOperators, FlexibleContexts, DefaultSignatures, FlexibleInstances, ConstraintKinds, TypeFamilies, DataKinds #-}
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Control.Elevator
+-- Copyright   :  (c) Fumiaki Kinoshita 2014
+-- License     :  BSD3
+--
+-- Maintainer  :  Fumiaki Kinoshita <fumiexcel@gmail.com>
+-- Stability   :  experimental
+-- Portability :  non-portable
+--
+-- Automated effect elevator
+--
+-----------------------------------------------------------------------------
 module Control.Elevator where
 import Control.Monad.Trans.State.Lazy as Lazy
 import Control.Monad.Trans.State.Strict as Strict
@@ -39,7 +52,8 @@ toLoft1 = id ||> toLoft
 
 elevate :: Elevate f g => f a -> g a
 elevate f = (id ||> toLoft) (liftU f)
-{-# INLINE elevate #-}
+{-# RULES "elevate/id" [~2] elevate = id #-}
+{-# INLINE[2] elevate #-}
 
 instance Tower IO where
   type Floors IO = ST RealWorld :> Empty
