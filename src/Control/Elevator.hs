@@ -99,9 +99,9 @@ instance (Monad m, Tower m) => Tower (ReaderT r m) where
     ||> lift . toLoft1
 
 instance (Monoid w, Monad m, Tower m) => Tower (Lazy.WriterT w m) where
-  type Floors (Lazy.WriterT s m) = Lazy.Writer s
-    :> Strict.Writer s
-    :> Strict.WriterT s m
+  type Floors (Lazy.WriterT w m) = Lazy.Writer w
+    :> Strict.Writer w
+    :> Strict.WriterT w m
     :> Floors1 m
   toLoft = Lazy.writer . Lazy.runWriter
     ||> Lazy.writer . Strict.runWriter
@@ -109,9 +109,9 @@ instance (Monoid w, Monad m, Tower m) => Tower (Lazy.WriterT w m) where
     ||> lift . toLoft1
 
 instance (Monoid w, Monad m, Tower m) => Tower (Strict.WriterT w m) where
-  type Floors (Strict.WriterT s m) = Lazy.Writer s
-    :> Strict.Writer s
-    :> Lazy.WriterT s m
+  type Floors (Strict.WriterT w m) = Lazy.Writer w
+    :> Strict.Writer w
+    :> Lazy.WriterT w m
     :> Floors1 m
   toLoft = Strict.writer . Lazy.runWriter
     ||> Strict.writer . Strict.runWriter
