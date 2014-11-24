@@ -30,6 +30,10 @@ import Control.Monad.Trans.Cont
 import Data.Monoid
 import Control.Monad.ST
 
+#ifndef MIN_VERSION_transformers
+#define MIN_VERSION_transformers(x,y,z) 1
+#endif
+
 #if MIN_VERSION_transformers(0,4,0)
 import Control.Monad.Trans.Except
 #else
@@ -146,7 +150,7 @@ instance (Monad m, Tower m) => Tower (ExceptT e m) where
     ||> lift . toLoft1
 #else
 instance (Error e, Monad m, Tower m) => Tower (ErrorT e m) where
-  type Floors (ExceptT e m) = Either e
+  type Floors (ErrorT e m) = Either e
     :> Floors1 m
   toLoft = ErrorT . return
     ||> lift . toLoft1
