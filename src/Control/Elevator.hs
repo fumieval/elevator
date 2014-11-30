@@ -42,10 +42,10 @@ import Control.Monad.Trans.Error
 
 class Tower f where
   type Floors f :: List (* -> *)
-  type Floors f = Empty
+  type Floors f = Identity :> Empty
   toLoft :: Union (Floors f) a -> f a
-  default toLoft :: Union Empty a -> f a
-  toLoft = exhaust
+  default toLoft :: Applicative f => Union (Identity :> Empty) a -> f a
+  toLoft = pure . runIdentity ||> exhaust
 
 type Elevate f g = (Tower g, f ∈ Floors1 g)
 
@@ -60,10 +60,13 @@ elevate f = (id ||> toLoft) (liftU f)
 {-# INLINE[2] elevate #-}
 
 instance Tower IO where
-  type Floors IO = ST RealWorld :> Empty
-  toLoft = stToIO ||> exhaust
+  type Floors IO = ST RealWorld :> Identity :> Empty
+  toLoft = stToIO ||> return . runIdentity ||> exhaust
 
-instance Tower Identity
+instance Tower Identity where
+  type Floors Identity = Empty
+  toLoft = exhaust
+
 instance Tower Maybe
 instance Tower (Either e)
 instance Tower ((->) r)
