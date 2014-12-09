@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP, TypeOperators, FlexibleContexts, DefaultSignatures, FlexibleInstances, ConstraintKinds, TypeFamilies, DataKinds #-}
+{-# LANGUAGE CPP, TypeOperators, FlexibleContexts, Rank2Types, DefaultSignatures, FlexibleInstances, ConstraintKinds, TypeFamilies, DataKinds, UndecidableInstances #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Control.Elevator
@@ -41,21 +41,22 @@ import Control.Monad.Trans.Error
 #endif
 
 class Tower f where
-  type Floors f :: List (* -> *)
+  type Floors (f :: * -> *) :: List (* -> *)
   type Floors f = Identity :> Empty
+  type Floors1 f :: List (* -> *)
+  type Floors1 f = f :> Floors f
   toLoft :: Union (Floors f) a -> f a
   default toLoft :: Applicative f => Union (Identity :> Empty) a -> f a
   toLoft = pure . runIdentity ||> exhaust
 
+  toLoft1 :: Union (Floors1 f) a -> f a
+  default toLoft1 :: Union (f :> Floors f) a -> f a
+  toLoft1 = id ||> toLoft
+
 type Elevate f g = (Tower g, f ∈ Floors1 g)
 
-type Floors1 g = g :> Floors g
-
-toLoft1 :: Tower f => Union (Floors1 f) a -> f a
-toLoft1 = id ||> toLoft
-
 elevate :: Elevate f g => f a -> g a
-elevate f = (id ||> toLoft) (liftU f)
+elevate f = toLoft1 (liftU f)
 {-# RULES "elevate/id" [~2] elevate = id #-}
 {-# INLINE[2] elevate #-}
 
