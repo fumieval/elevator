@@ -1,5 +1,5 @@
 name:                elevator
-version:             0.1.3
+version:             0.2
 synopsis:            Immediately lifts to a desired level
 description:         This package provides 'elevate' function which composes 'lift'-like transformations automatically.
 homepage:            https://github.com/fumieval/elevator
@@ -22,8 +22,8 @@ source-repository head
 
 library
   exposed-modules:     Control.Elevator
-  -- other-modules:       
+  -- other-modules:
   other-extensions:    TypeOperators, FlexibleContexts, FlexibleInstances, ConstraintKinds, TypeFamilies, DataKinds
-  build-depends:       base == 4.*, transformers >= 0.3, clean-unions
+  build-depends:       base == 4.*, transformers >= 0.3, extensible
   hs-source-dirs:      src
   default-language:    Haskell2010
