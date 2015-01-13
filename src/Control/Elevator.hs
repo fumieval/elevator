@@ -43,23 +43,29 @@ import Control.Monad.Trans.Except
 import Control.Monad.Trans.Error
 #endif
 
+-- | A class of types which have bases.
 class Tower f where
   type Floors (f :: * -> *) :: [* -> *]
   type Floors f = '[Identity]
 
+  -- | The product of all ways to lift.
   stairs :: Match (K1 a) (f a) :* Floors f
   default stairs :: Applicative f => Match (K1 a) (f a) :* '[Identity]
   stairs = pure . runIdentity <?! Nil
 
+-- | The parents and itself.
 type Floors1 f = f ': Floors f
 
+-- | 'stairs' for 'Floors1'.
 stairs1 :: Tower f => Match (K1 a) (f a) :* Floors1 f
 stairs1 = id <?! stairs
 
+-- | @f@ can be lifted to @g@
 type Elevate f g = (Tower g, f ∈ Floors1 g)
 
+-- | Lift a thing, automatically.
 elevate :: Elevate f g => f a -> g a
-elevate f = match stairs1 (embed (K1 f))
+elevate = match stairs1 . embed . K1
 {-# RULES "elevate/id" [~2] elevate = id #-}
 {-# INLINE[2] elevate #-}
 
