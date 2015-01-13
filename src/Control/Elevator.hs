@@ -142,7 +142,7 @@ instance (Monoid w, Monad m, Tower m) => Tower (Strict.WriterT w m) where
 instance (Monad m, Tower m) => Tower (ContT r m) where
   type Floors (ContT r m) = Cont (m r)
     ': Floors1 m
-  stairs = (\m -> ContT $ \cont -> runCont m cont)
+  stairs = (ContT . runCont)
     <?! hmap (mapMatch lift) stairs1
 
 instance (Monad m, Tower m) => Tower (MaybeT m) where
