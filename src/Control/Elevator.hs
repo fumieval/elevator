@@ -29,7 +29,6 @@ import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader
 import Control.Monad.Trans.Maybe
 import Control.Monad.Trans.List
-import Control.Monad.Trans.Either
 import Data.Monoid
 import Control.Monad.ST
 import Data.Proxy
@@ -175,11 +174,3 @@ instance (Error e, Monad m, Tower m) => Tower (ErrorT e m) where
     *++* ErrorT . return
     `rung` htrans (\(Gondola f) -> Gondola $ mapErrorT f) stairs
 #endif
-
-instance (Monad m, Tower m) => Tower (EitherT e m) where
-  type Floors (EitherT e m) = Floors1 m
-    ++ Either e
-    ': Map (EitherT e) (Floors m)
-  stairs = liftGondolas
-    *++* EitherT . return
-    `rung` htrans (\(Gondola f) -> Gondola $ mapEitherT f) stairs
