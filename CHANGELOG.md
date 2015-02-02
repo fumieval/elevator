@@ -1,7 +1,13 @@
+0.2.0.1
+---------------------------------
+* Re-exported some `extensible` combinators.
+* Added `mapGondolas`.
+
 0.2
 ---------------------------------
 * Switched to use extensible. Things will be faster and saner.
 * `elevate` is now more flexible.
+* `elevate` no longer has eager strategy, revealing potential ambiguousness.
 
 0.1.3
 ---------------------------------

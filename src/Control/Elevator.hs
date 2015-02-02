@@ -2,7 +2,7 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Control.Elevator
--- Copyright   :  (c) Fumiaki Kinoshita 2014
+-- Copyright   :  (c) Fumiaki Kinoshita 2015
 -- License     :  BSD3
 --
 -- Maintainer  :  Fumiaki Kinoshita <fumiexcel@gmail.com>
@@ -12,7 +12,18 @@
 -- Automated effect elevator
 --
 -----------------------------------------------------------------------------
-module Control.Elevator where
+module Control.Elevator (Elevate
+  , elevate
+  -- * Construction kit
+  , Tower(..)
+  , Floors1
+  , stairs1
+  , Gondola(..)
+  , rung
+  , (:*)(Nil)
+  , (*++*)
+  , mapGondolas
+  , liftGondolas) where
 import Control.Monad.Trans.State.Lazy as Lazy
 import Control.Monad.Trans.State.Strict as Strict
 import Control.Monad.Trans.Writer.Lazy as Lazy
@@ -44,11 +55,27 @@ import Control.Monad.Trans.Except
 import Control.Monad.Trans.Error
 #endif
 
+-- | @f@ can be lifted to @g@
+type Elevate f g = (Tower g, f ∈ Floors1 g)
+
+-- | Lift a thing, automatically.
+elevate :: Elevate f g => f a -> g a
+elevate = runGondola (hlookup membership stairs1)
+{-# RULES "elevate/id" [~2] elevate = id #-}
+{-# INLINE[2] elevate #-}
+
+----------------------------------------------------------------------------
+
+-- | Transformation between effects
+newtype Gondola f g = Gondola { runGondola :: forall a. g a -> f a }
+
+-- | Add a new transformation.
 rung :: (forall x. f x -> g x) -> Gondola g :* fs -> Gondola g :* (f ': fs)
 rung f = (<:) (Gondola f)
 infixr 0 `rung`
 
-newtype Gondola f g = Gondola { runGondola :: forall a. g a -> f a }
+mapGondolas :: (forall x. m x -> n x) -> Gondola m :* xs -> Gondola n :* xs
+mapGondolas g = hmap (\(Gondola f) -> Gondola $ g . f)
 
 -- | A class of types which have bases.
 class Tower f where
@@ -67,14 +94,8 @@ type Floors1 f = f ': Floors f
 stairs1 :: Tower f => Gondola f :* Floors1 f
 stairs1 = id `rung` stairs
 
--- | @f@ can be lifted to @g@
-type Elevate f g = (Tower g, f ∈ Floors1 g)
-
--- | Lift a thing, automatically.
-elevate :: Elevate f g => f a -> g a
-elevate = runGondola (hlookup membership stairs1)
-{-# RULES "elevate/id" [~2] elevate = id #-}
-{-# INLINE[2] elevate #-}
+liftGondolas :: (Monad m, Tower m, MonadTrans t) => Gondola (t m) :* Floors1 m
+liftGondolas = mapGondolas lift stairs1
 
 instance Tower IO where
   type Floors IO = '[ST RealWorld, Identity]
@@ -97,9 +118,6 @@ instance Generate xs => Tower (Union xs) where
 instance Forall Functor xs => Tower (League xs) where
   type Floors (League xs) = xs
   stairs = generateFor (Proxy :: Proxy Functor) $ \pos -> Gondola $ \f -> League $ UnionAt pos $ Fuse (<$>f)
-
-liftGondolas :: (Monad m, Tower m, MonadTrans t) => Gondola (t m) :* Floors1 m
-liftGondolas = hmap (\(Gondola f) -> Gondola $ lift . f) stairs1
 
 instance (Monad m, Tower m) => Tower (Lazy.StateT s m) where
   type Floors (Lazy.StateT s m) = Floors1 m
