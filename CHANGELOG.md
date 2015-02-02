@@ -1,7 +1,8 @@
-0.2.0.1
+0.2.1
 ---------------------------------
 * Re-exported some `extensible` combinators.
 * Added `mapGondolas`.
+* Supported RWST.
 
 0.2
 ---------------------------------

@@ -28,6 +28,8 @@ import Control.Monad.Trans.State.Lazy as Lazy
 import Control.Monad.Trans.State.Strict as Strict
 import Control.Monad.Trans.Writer.Lazy as Lazy
 import Control.Monad.Trans.Writer.Strict as Strict
+import Control.Monad.Trans.RWS.Lazy as LazyRWS
+import Control.Monad.Trans.RWS.Strict as StrictRWS
 import Control.Monad.Trans.Identity
 import Data.Functor.Identity
 import Data.Extensible
@@ -37,7 +39,7 @@ import Data.Extensible.League
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans.Class
-import Control.Monad.Trans.Reader
+import Control.Monad.Trans.Reader as Reader
 import Control.Monad.Trans.Maybe
 import Control.Monad.Trans.List
 import Data.Monoid
@@ -140,7 +142,7 @@ instance (Monad m, Tower m) => Tower (ReaderT r m) where
     ++ (->) r
     ': Map (ReaderT r) (Floors1 m)
   stairs = liftGondolas
-    *++* reader
+    *++* Reader.reader
     `rung` htrans (\(Gondola f) -> Gondola $ ReaderT . fmap f . runReaderT) stairs1
 
 instance (Monoid w, Monad m, Tower m) => Tower (Lazy.WriterT w m) where
@@ -174,6 +176,26 @@ instance (Monad m, Tower m) => Tower (ListT m) where
   stairs = liftGondolas
     *++* ListT . return
     `rung` htrans (\(Gondola f) -> Gondola $ mapListT f) stairs
+
+instance (Monad m, Tower m, Monoid w) => Tower (LazyRWS.RWST r w s m) where
+  type Floors (LazyRWS.RWST r w s m) = Floors1 m
+    ++ Map (ReaderT r) (Floors1 m)
+    ++ Map (Lazy.WriterT w) (Floors1 m)
+    ++ Map (Lazy.StateT s) (Floors1 m)
+  stairs = liftGondolas
+    *++* htrans (\(Gondola f) -> Gondola $ \g -> LazyRWS.RWST $ \r s -> f (runReaderT g r) >>= \a -> return (a, s, mempty)) stairs1
+    *++* htrans (\(Gondola f) -> Gondola $ \g -> LazyRWS.RWST $ \_ s -> f (Lazy.runWriterT g) >>= \(a, w) -> return (a, s, w)) stairs1
+    *++* htrans (\(Gondola f) -> Gondola $ \g -> LazyRWS.RWST $ \_ s -> f (Lazy.runStateT g s) >>= \(a, s') -> return (a, s', mempty)) stairs1
+
+instance (Monad m, Tower m, Monoid w) => Tower (StrictRWS.RWST r w s m) where
+  type Floors (StrictRWS.RWST r w s m) = Floors1 m
+    ++ Map (ReaderT r) (Floors1 m)
+    ++ Map (Strict.WriterT w) (Floors1 m)
+    ++ Map (Strict.StateT s) (Floors1 m)
+  stairs = liftGondolas
+    *++* htrans (\(Gondola f) -> Gondola $ \g -> StrictRWS.RWST $ \r s -> f (runReaderT g r) >>= \a -> return (a, s, mempty)) stairs1
+    *++* htrans (\(Gondola f) -> Gondola $ \g -> StrictRWS.RWST $ \_ s -> f (Strict.runWriterT g) >>= \(a, w) -> return (a, s, w)) stairs1
+    *++* htrans (\(Gondola f) -> Gondola $ \g -> StrictRWS.RWST $ \_ s -> f (Strict.runStateT g s) >>= \(a, s') -> return (a, s', mempty)) stairs1
 
 #if MIN_VERSION_transformers(0,4,0)
 instance (Monad m, Tower m) => Tower (ExceptT e m) where
