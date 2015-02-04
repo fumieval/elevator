@@ -34,6 +34,7 @@ import Control.Monad.Trans.Identity
 import Data.Functor.Identity
 import Data.Extensible
 import Data.Extensible.Internal
+import Data.Extensible.Internal.Rig (views)
 import Data.Extensible.Union
 import Data.Extensible.League
 import Control.Applicative
@@ -62,7 +63,7 @@ type Elevate f g = (Tower g, f ∈ Floors1 g)
 
 -- | Lift a thing, automatically.
 elevate :: Elevate f g => f a -> g a
-elevate = runGondola (hlookup membership stairs1)
+elevate = views sector runGondola stairs1
 {-# RULES "elevate/id" [~2] elevate = id #-}
 {-# INLINE[2] elevate #-}
 
