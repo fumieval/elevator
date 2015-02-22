@@ -116,11 +116,11 @@ instance Tower (ST s)
 
 instance Generate xs => Tower (Union xs) where
   type Floors (Union xs) = xs
-  stairs = generate $ \pos -> Gondola $ Union . UnionAt pos . Flux id
+  stairs = htabulate $ \pos -> Gondola $ Union . UnionAt pos . Flux id
 
 instance Forall Functor xs => Tower (League xs) where
   type Floors (League xs) = xs
-  stairs = generateFor (Proxy :: Proxy Functor) $ \pos -> Gondola $ \f -> League $ UnionAt pos $ Fuse (<$>f)
+  stairs = htabulateFor (Proxy :: Proxy Functor) $ \pos -> Gondola $ \f -> League $ UnionAt pos $ Fuse (<$>f)
 
 instance (Monad m, Tower m) => Tower (Lazy.StateT s m) where
   type Floors (Lazy.StateT s m) = Floors1 m
