@@ -23,7 +23,11 @@ module Control.Elevator (Elevate
   , (:*)(Nil)
   , (*++*)
   , mapGondolas
-  , liftGondolas) where
+  , liftGondolas
+  -- * Open union
+  , Union(..)
+  , reunion
+  ) where
 import Control.Monad.Trans.State.Lazy as Lazy
 import Control.Monad.Trans.State.Strict as Strict
 import Control.Monad.Trans.Writer.Lazy as Lazy
@@ -32,11 +36,9 @@ import Control.Monad.Trans.RWS.Lazy as LazyRWS
 import Control.Monad.Trans.RWS.Strict as StrictRWS
 import Control.Monad.Trans.Identity
 import Data.Functor.Identity
-import Data.Extensible
+import Data.Extensible hiding (Union)
 import Data.Extensible.Internal
 import Data.Extensible.Internal.Rig (views)
-import Data.Extensible.Union
-import Data.Extensible.League
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans.Class
@@ -63,9 +65,14 @@ type Elevate f g = (Tower g, f ∈ Floors1 g)
 
 -- | Lift a thing, automatically.
 elevate :: Elevate f g => f a -> g a
-elevate = views sector runGondola stairs1
+elevate = runGondolas stairs1
 {-# RULES "elevate/id" [~2] elevate = id #-}
 {-# INLINE[2] elevate #-}
+
+newtype Union xs a = Union { getUnion :: K1 a :| xs }
+
+reunion :: Gondola m :* xs -> Union xs a -> m a
+reunion gs (Union (UnionAt pos (K1 f))) = views (sectorAt pos) runGondola gs f
 
 ----------------------------------------------------------------------------
 
@@ -79,6 +86,9 @@ infixr 0 `rung`
 
 mapGondolas :: (forall x. m x -> n x) -> Gondola m :* xs -> Gondola n :* xs
 mapGondolas g = hmap (\(Gondola f) -> Gondola $ g . f)
+
+runGondolas :: (x ∈ xs) => Gondola f :* xs -> x a -> f a
+runGondolas = views sector runGondola
 
 -- | A class of types which have bases.
 class Tower f where
@@ -116,11 +126,7 @@ instance Tower (ST s)
 
 instance Generate xs => Tower (Union xs) where
   type Floors (Union xs) = xs
-  stairs = htabulate $ \pos -> Gondola $ Union . UnionAt pos . Flux id
-
-instance Forall Functor xs => Tower (League xs) where
-  type Floors (League xs) = xs
-  stairs = htabulateFor (Proxy :: Proxy Functor) $ \pos -> Gondola $ \f -> League $ UnionAt pos $ Fuse (<$>f)
+  stairs = htabulate $ \pos -> Gondola $ Union . UnionAt pos . K1
 
 instance (Monad m, Tower m) => Tower (Lazy.StateT s m) where
   type Floors (Lazy.StateT s m) = Floors1 m
