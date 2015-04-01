@@ -1,3 +1,11 @@
+0.2.3
+---------------------------------
+* No longer supports `League`
+
+0.2.2
+---------------------------------
+* Supported newer version of `extensible`
+
 0.2.1
 ---------------------------------
 * Re-exported some `extensible` combinators.
