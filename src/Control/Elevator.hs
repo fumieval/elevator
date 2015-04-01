@@ -24,7 +24,7 @@ module Control.Elevator (Elevate
   , (*++*)
   , mapGondolas
   , liftGondolas
-  -- * Open union
+  -- * Open unions
   , Union(..)
   , reunion
   ) where
@@ -36,7 +36,8 @@ import Control.Monad.Trans.RWS.Lazy as LazyRWS
 import Control.Monad.Trans.RWS.Strict as StrictRWS
 import Control.Monad.Trans.Identity
 import Data.Functor.Identity
-import Data.Extensible hiding (Union)
+import Data.Extensible
+import Data.Extensible.Union
 import Data.Extensible.Internal
 import Data.Extensible.Internal.Rig (views)
 import Control.Applicative
@@ -69,26 +70,7 @@ elevate = runGondolas stairs1
 {-# RULES "elevate/id" [~2] elevate = id #-}
 {-# INLINE[2] elevate #-}
 
-newtype Union xs a = Union { getUnion :: K1 a :| xs }
-
-reunion :: Gondola m :* xs -> Union xs a -> m a
-reunion gs (Union (UnionAt pos (K1 f))) = views (sectorAt pos) runGondola gs f
-
 ----------------------------------------------------------------------------
-
--- | Transformation between effects
-newtype Gondola f g = Gondola { runGondola :: forall a. g a -> f a }
-
--- | Add a new transformation.
-rung :: (forall x. f x -> g x) -> Gondola g :* fs -> Gondola g :* (f ': fs)
-rung f = (<:) (Gondola f)
-infixr 0 `rung`
-
-mapGondolas :: (forall x. m x -> n x) -> Gondola m :* xs -> Gondola n :* xs
-mapGondolas g = hmap (\(Gondola f) -> Gondola $ g . f)
-
-runGondolas :: (x ∈ xs) => Gondola f :* xs -> x a -> f a
-runGondolas = views sector runGondola
 
 -- | A class of types which have bases.
 class Tower f where
@@ -109,6 +91,9 @@ stairs1 = id `rung` stairs
 
 liftGondolas :: (Monad m, Tower m, MonadTrans t) => Gondola (t m) :* Floors1 m
 liftGondolas = mapGondolas lift stairs1
+
+mapGondolas :: (forall x. m x -> n x) -> Gondola m :* xs -> Gondola n :* xs
+mapGondolas g = hmap (\(Gondola f) -> Gondola $ g . f)
 
 instance Tower IO where
   type Floors IO = '[ST RealWorld, Identity]
